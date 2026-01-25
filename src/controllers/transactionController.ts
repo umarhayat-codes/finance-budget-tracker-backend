@@ -11,6 +11,40 @@ interface AuthRequest extends Request {
   user?: TokenPayload;
 }
 
+interface Transaction {
+  id: string;
+  userId: string;
+  category: string;
+  date: string;
+  time: string;
+  amount: number;
+  method: string;
+  type: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface Saving {
+  id: string;
+  userId: string;
+  title: string;
+  amount: number;
+  date: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface Budget {
+  id: string;
+  userId: string;
+  category: string;
+  amount: number;
+  month: string;
+  year: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export const createTransaction = async (
   req: AuthRequest,
   res: Response,
@@ -81,30 +115,6 @@ export const getTransactionSummary = async (
       return;
     }
 
-    // Define interfaces locally to avoid import issues
-    interface Saving {
-      id: string;
-      title: string;
-      amount: string;
-      date: string;
-      userId: string;
-      createdAt: Date;
-      updatedAt: Date;
-    }
-
-    interface Transaction {
-      id: string;
-      userId: string;
-      category: string;
-      date: string;
-      time: string;
-      amount: number;
-      method: string;
-      type: string;
-      createdAt: Date;
-      updatedAt: Date;
-    }
-
     interface ParsedTransaction extends Transaction {
       parsedDate: Date;
     }
@@ -114,10 +124,10 @@ export const getTransactionSummary = async (
     }
 
     const [transactionsRaw, savingsRaw] = await Promise.all([
-      (prisma as any).transaction.findMany({
+      prisma.transaction.findMany({
         where: { userId },
       }),
-      (prisma as any).saving.findMany({
+      prisma.saving.findMany({
         where: { userId },
       }),
     ]);
@@ -273,6 +283,224 @@ export const getTransactionSummary = async (
     });
   } catch (error) {
     console.error("GetTransactionSummary error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getFinancialSummary = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const [transactions, savings, budgets] = await Promise.all([
+      prisma.transaction.findMany({
+        where: { userId },
+      }),
+      prisma.saving.findMany({
+        where: { userId },
+      }),
+      prisma.budget.findMany({
+        where: { userId },
+      }),
+    ]);
+
+    let totalIncome = 0;
+    let totalExpense = 0;
+    (transactions as Transaction[]).forEach((t) => {
+      const amount = Number(t.amount);
+      if (t.type === "income") {
+        totalIncome += amount;
+      } else if (t.type === "expense") {
+        totalExpense += amount;
+      }
+    });
+
+    const totalSaving = (savings as unknown as Saving[]).reduce(
+      (acc, curr) => acc + Number(curr.amount),
+      0,
+    );
+    const totalBudget = (budgets as Budget[]).reduce(
+      (acc, curr) => acc + Number(curr.amount),
+      0,
+    );
+
+    res.status(200).json({
+      totalIncome,
+      totalExpense,
+      totalSaving,
+      totalBudget,
+    });
+  } catch (error) {
+    console.error("GetFinancialSummary error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Helper function to map category to icon type
+const mapCategoryToIcon = (category: string): string => {
+  const categoryLower = category.toLowerCase();
+
+  if (
+    categoryLower.includes("food") ||
+    categoryLower.includes("grocery") ||
+    categoryLower.includes("restaurant") ||
+    categoryLower.includes("dinner") ||
+    categoryLower.includes("lunch")
+  ) {
+    return "food";
+  } else if (
+    categoryLower.includes("salary") ||
+    categoryLower.includes("income") ||
+    categoryLower.includes("wallet") ||
+    categoryLower.includes("payment")
+  ) {
+    return "wallet";
+  } else if (
+    categoryLower.includes("internet") ||
+    categoryLower.includes("subscription") ||
+    categoryLower.includes("online") ||
+    categoryLower.includes("web")
+  ) {
+    return "globe";
+  } else if (
+    categoryLower.includes("electric") ||
+    categoryLower.includes("power") ||
+    categoryLower.includes("utilities")
+  ) {
+    return "power";
+  } else if (
+    categoryLower.includes("rent") ||
+    categoryLower.includes("home") ||
+    categoryLower.includes("house") ||
+    categoryLower.includes("project")
+  ) {
+    return "home";
+  }
+
+  return "wallet"; // default icon
+};
+
+// Helper function to format date
+const formatTransactionDate = (dateStr: string): string => {
+  try {
+    const date = new Date(dateStr);
+    const month = date.toLocaleString("en-US", { month: "short" });
+    const day = date.getDate();
+
+    // Add ordinal suffix
+    let suffix = "th";
+    if (day === 1 || day === 21 || day === 31) suffix = "st";
+    else if (day === 2 || day === 22) suffix = "nd";
+    else if (day === 3 || day === 23) suffix = "rd";
+
+    return `${month} ${day}${suffix}`;
+  } catch (error) {
+    return dateStr;
+  }
+};
+
+// Helper function to format amount
+const formatAmount = (amount: number, type: string): string => {
+  const amountK =
+    amount >= 1000000
+      ? `${(amount / 1000000).toFixed(1)}M`
+      : `${(amount / 1000).toFixed(0)}K`;
+
+  return type === "income" ? `+IDR ${amountK}` : `-IDR ${amountK}`;
+};
+
+export const getRecentTransactions = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    interface Transaction {
+      id: string;
+      userId: string;
+      category: string;
+      date: string;
+      time: string;
+      amount: number;
+      method: string;
+      type: string;
+      createdAt: Date;
+      updatedAt: Date;
+    }
+
+    // Get query parameters
+    const month = req.query.month as string | undefined;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 5;
+    const skip = (page - 1) * limit;
+
+    // Build where clause
+    const whereClause: {
+      userId: string;
+      date?: { contains: string };
+    } = { userId };
+
+    // If month is provided and not "all", filter by month number (e.g., "01" for January)
+    // This will match all years for that month
+    if (month && month !== "all") {
+      // Month format is "01", "02", etc.
+      // We want to match dates like "2026-01-15", "2025-01-20", etc.
+      // Using contains with "-01-" will match January in any year
+      whereClause.date = { contains: `-${month}-` };
+    }
+
+    // Fetch transactions with pagination
+    const [transactions, totalCount] = await Promise.all([
+      prisma.transaction.findMany({
+        where: whereClause,
+        orderBy: { date: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.transaction.count({
+        where: whereClause,
+      }),
+    ]);
+
+    // Map transactions to frontend format
+    const formattedTransactions = (transactions as Transaction[]).map((t) => ({
+      id: t.id,
+      category: t.category,
+      subCategory: t.category, // Using category as subcategory for now
+      amount: formatAmount(t.amount, t.type),
+      date: formatTransactionDate(t.date),
+      paymentMethod: t.method,
+      status: t.type === "income" ? "Received" : "Success",
+      type: t.type,
+      iconType: mapCategoryToIcon(t.category),
+    }));
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    res.status(200).json({
+      transactions: formattedTransactions,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalCount,
+        limit,
+      },
+    });
+  } catch (error) {
+    console.error("GetRecentTransactions error:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };

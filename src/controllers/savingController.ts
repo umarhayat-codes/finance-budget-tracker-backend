@@ -11,14 +11,14 @@ interface AuthRequest extends Request {
 
 interface SavingInput {
   title: string;
-  amount: string;
+  amount: number;
   date: string;
 }
 
 interface Saving {
   id: string;
   title: string;
-  amount: string;
+  amount: number;
   date: string;
   userId: string;
   createdAt: Date;
@@ -27,7 +27,7 @@ interface Saving {
 
 interface SavingModel {
   create: (args: {
-    data: { title: string; amount: string; date: string; userId: string };
+    data: { title: string; amount: number; date: string; userId: string };
   }) => Promise<Saving>;
   findMany: (args: {
     where: { userId: string };
@@ -57,14 +57,15 @@ export const createSaving = async (
     const saving = await db.saving.create({
       data: {
         title,
-        amount,
+        amount: Number(amount),
         date,
         userId,
       },
     });
-
+    console.log("-----CreateSaving saving ----:", saving);
     res.status(201).json(saving);
   } catch (error) {
+    console.log("-----CreateSaving error ----:", error);
     res.status(500).json({ message: "Error creating saving", error });
   }
 };
@@ -92,9 +93,10 @@ export const getSavings = async (
       where: { userId },
       orderBy: { createdAt: "desc" },
     });
-
+    console.log("-----getSavings savings ----:", savings);
     res.status(200).json(savings);
   } catch (error) {
+    console.log("-----getSavings error ----:", error);
     res.status(500).json({ message: "Error fetching savings", error });
   }
 };

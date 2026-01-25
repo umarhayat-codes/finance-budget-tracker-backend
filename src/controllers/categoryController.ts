@@ -42,7 +42,7 @@ const db = prisma as unknown as ExtendedPrisma;
 
 export const createCategory = async (
   req: AuthRequest,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const { name, amount }: CategoryInput = req.body;
@@ -53,9 +53,6 @@ export const createCategory = async (
       return;
     }
 
-    // Accessing through typed prisma client.
-    // If the type is still missing, we use bracket notation which is safer than 'any'
-    // but here we assume the generate was successful as per user.
     const category = await db.category.create({
       data: {
         name,
@@ -72,7 +69,7 @@ export const createCategory = async (
 
 export const getCategories = async (
   req: AuthRequest,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const userId = req.user?.userId;
@@ -86,9 +83,10 @@ export const getCategories = async (
       where: { userId },
       orderBy: { createdAt: "desc" },
     });
-
+    console.log("-----GetCategories categories ----:", categories);
     res.status(200).json(categories);
   } catch (error) {
+    console.error("-----GetCategories error ----:", error);
     res.status(500).json({ message: "Error fetching categories", error });
   }
 };

@@ -10,6 +10,8 @@ import budgetRoutes from "./routes/budgetRoute";
 import goalRoutes from "./routes/goalRoute";
 import reminderRoutes from "./routes/reminderRoute";
 import savingRoutes from "./routes/savingRoute";
+import profileRoutes from "./routes/profileRoute";
+import financeRoutes from "./routes/financeRoute";
 dotenv.config();
 
 const app = express();
@@ -36,6 +38,8 @@ app.use("/api/budgets", budgetRoutes);
 app.use("/api/goals", goalRoutes);
 app.use("/api/reminder", reminderRoutes);
 app.use("/api/savings", savingRoutes);
+app.use("/api/profile", profileRoutes);
+app.use("/api/finance", financeRoutes);
 // app.get("/", (req, res) => {
 //   res.send("API is running...");
 // });

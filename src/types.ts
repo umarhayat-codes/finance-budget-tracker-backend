@@ -11,3 +11,10 @@ export interface CategoryResponse {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface FinancialSummary {
+  totalIncome: number;
+  totalExpense: number;
+  totalSaving: number;
+  totalBudget: number;
+}
