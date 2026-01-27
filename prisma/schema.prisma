@@ -106,12 +106,14 @@ model Transaction {
   @@map("transaction_activity")
 }
 
+
 model Category {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   userId    String   @db.ObjectId
   user      User     @relation(fields: [userId], references: [id])
   name      String
   amount    Float
+  type      String   @default("expense")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

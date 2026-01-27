@@ -1,49 +1,6 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import prisma from "../prisma";
-
-interface TokenPayload {
-  userId: string;
-  email: string;
-  role: string;
-}
-
-interface AuthRequest extends Request {
-  user?: TokenPayload;
-}
-
-interface Transaction {
-  id: string;
-  userId: string;
-  category: string;
-  date: string;
-  time: string;
-  amount: number;
-  method: string;
-  type: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface Saving {
-  id: string;
-  userId: string;
-  title: string;
-  amount: number;
-  date: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface Budget {
-  id: string;
-  userId: string;
-  category: string;
-  amount: number;
-  month: string;
-  year: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { AuthRequest, Transaction, Saving, Budget, Category } from "../types";
 
 export const createTransaction = async (
   req: AuthRequest,
@@ -57,17 +14,73 @@ export const createTransaction = async (
       return;
     }
 
+    const parsedAmount = parseFloat(amount);
+
     const transaction = await prisma.transaction.create({
       data: {
         userId,
         category,
         date,
         time,
-        amount: parseFloat(amount),
+        amount: parsedAmount,
         method,
         type,
       },
     });
+
+    const existingCategory = (await prisma.category.findFirst({
+      where: { userId, name: category },
+    })) as Category | null;
+
+    if (existingCategory) {
+      await prisma.category.update({
+        where: { id: existingCategory.id },
+        data: {
+          amount:
+            type === "income"
+              ? existingCategory.amount + parsedAmount
+              : existingCategory.amount - parsedAmount,
+        },
+      });
+    } else if (type === "income") {
+      await prisma.category.create({
+        data: {
+          userId,
+          name: category,
+          amount: parsedAmount,
+        },
+      });
+    }
+
+    if (type === "expense") {
+      const incomeCategories = await prisma.transaction.findMany({
+        where: { userId, type: "income" },
+        select: { category: true },
+        distinct: ["category"],
+      });
+
+      const incomeCategoryNames = incomeCategories.map((ic) => ic.category);
+
+      if (incomeCategoryNames.length === 0) {
+        incomeCategoryNames.push("Salary", "Freelancing");
+      }
+
+      const targetIncomeCategory = await prisma.category.findFirst({
+        where: {
+          userId,
+          name: { in: incomeCategoryNames },
+        },
+      });
+
+      if (targetIncomeCategory) {
+        await prisma.category.update({
+          where: { id: targetIncomeCategory.id },
+          data: {
+            amount: targetIncomeCategory.amount - parsedAmount,
+          },
+        });
+      }
+    }
 
     res.status(201).json({
       message: "Transaction created successfully",
@@ -132,8 +145,9 @@ export const getTransactionSummary = async (
       }),
     ]);
 
-    // Parse dates and filter invalid ones
-    const transactions: ParsedTransaction[] = (transactionsRaw as Transaction[])
+    const transactions: ParsedTransaction[] = (
+      transactionsRaw as unknown as Transaction[]
+    )
       .map((t: Transaction) => ({
         ...t,
         parsedDate: new Date(t.date),
@@ -147,7 +161,6 @@ export const getTransactionSummary = async (
       }))
       .filter((s) => !isNaN(s.parsedDate.getTime()));
 
-    // If no data at all
     if (transactions.length === 0 && savings.length === 0) {
       const now = new Date();
       const currentMonthLabel = now.toLocaleString("en-US", {
@@ -170,7 +183,6 @@ export const getTransactionSummary = async (
       return;
     }
 
-    // Sort to find true range
     const allRecords = [
       ...transactions.map((t: ParsedTransaction) => ({ date: t.parsedDate })),
       ...savings.map((s: ParsedSaving) => ({ date: s.parsedDate })),
@@ -187,7 +199,6 @@ export const getTransactionSummary = async (
     );
     const endDate = new Date(lastDate.getFullYear(), lastDate.getMonth(), 1);
 
-    // Generate Month Labels
     const allMonths: string[] = [];
     const dateCursor = new Date(startDate);
     while (dateCursor <= endDate) {
@@ -230,6 +241,7 @@ export const getTransactionSummary = async (
         } else if (t.type === "expense") {
           monthlyAgg[key].expense += t.amount;
           totalExpense += t.amount;
+          totalIncome -= t.amount;
           categoryMap[t.category] = (categoryMap[t.category] || 0) + t.amount;
         }
       }
@@ -313,21 +325,22 @@ export const getFinancialSummary = async (
 
     let totalIncome = 0;
     let totalExpense = 0;
-    (transactions as Transaction[]).forEach((t) => {
+    (transactions as unknown as Transaction[]).forEach((t) => {
       const amount = Number(t.amount);
       if (t.type === "income") {
         totalIncome += amount;
       } else if (t.type === "expense") {
         totalExpense += amount;
+        totalIncome -= amount;
       }
     });
 
     const totalSaving = (savings as unknown as Saving[]).reduce(
-      (acc, curr) => acc + Number(curr.amount),
+      (acc: number, curr: Saving) => acc + Number(curr.amount),
       0,
     );
-    const totalBudget = (budgets as Budget[]).reduce(
-      (acc, curr) => acc + Number(curr.amount),
+    const totalBudget = (budgets as unknown as Budget[]).reduce(
+      (acc: number, curr: Budget) => acc + Number(curr.amount),
       0,
     );
 
@@ -343,7 +356,6 @@ export const getFinancialSummary = async (
   }
 };
 
-// Helper function to map category to icon type
 const mapCategoryToIcon = (category: string): string => {
   const categoryLower = category.toLowerCase();
 
@@ -384,17 +396,15 @@ const mapCategoryToIcon = (category: string): string => {
     return "home";
   }
 
-  return "wallet"; // default icon
+  return "wallet";
 };
 
-// Helper function to format date
 const formatTransactionDate = (dateStr: string): string => {
   try {
     const date = new Date(dateStr);
     const month = date.toLocaleString("en-US", { month: "short" });
     const day = date.getDate();
 
-    // Add ordinal suffix
     let suffix = "th";
     if (day === 1 || day === 21 || day === 31) suffix = "st";
     else if (day === 2 || day === 22) suffix = "nd";
@@ -406,7 +416,6 @@ const formatTransactionDate = (dateStr: string): string => {
   }
 };
 
-// Helper function to format amount
 const formatAmount = (amount: number, type: string): string => {
   const amountK =
     amount >= 1000000
@@ -441,28 +450,20 @@ export const getRecentTransactions = async (
       updatedAt: Date;
     }
 
-    // Get query parameters
     const month = req.query.month as string | undefined;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 5;
     const skip = (page - 1) * limit;
 
-    // Build where clause
     const whereClause: {
       userId: string;
       date?: { contains: string };
     } = { userId };
 
-    // If month is provided and not "all", filter by month number (e.g., "01" for January)
-    // This will match all years for that month
     if (month && month !== "all") {
-      // Month format is "01", "02", etc.
-      // We want to match dates like "2026-01-15", "2025-01-20", etc.
-      // Using contains with "-01-" will match January in any year
       whereClause.date = { contains: `-${month}-` };
     }
 
-    // Fetch transactions with pagination
     const [transactions, totalCount] = await Promise.all([
       prisma.transaction.findMany({
         where: whereClause,
@@ -475,11 +476,10 @@ export const getRecentTransactions = async (
       }),
     ]);
 
-    // Map transactions to frontend format
     const formattedTransactions = (transactions as Transaction[]).map((t) => ({
       id: t.id,
       category: t.category,
-      subCategory: t.category, // Using category as subcategory for now
+      subCategory: t.category,
       amount: formatAmount(t.amount, t.type),
       date: formatTransactionDate(t.date),
       paymentMethod: t.method,
@@ -501,6 +501,77 @@ export const getRecentTransactions = async (
     });
   } catch (error) {
     console.error("GetRecentTransactions error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const updateIncomeBalance = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const transactions = await prisma.transaction.findMany({
+      where: { userId },
+    });
+
+    let totalIncome = 0;
+    let totalExpense = 0;
+
+    transactions.forEach((t) => {
+      if (t.type === "income") {
+        totalIncome += t.amount;
+      } else if (t.type === "expense") {
+        totalExpense += t.amount;
+      }
+    });
+
+    const netIncome = totalIncome - totalExpense;
+
+    const incomeCategories = await prisma.transaction.findMany({
+      where: { userId, type: "income" },
+      select: { category: true },
+      distinct: ["category"],
+    });
+
+    const incomeCategoryNames = incomeCategories.map((ic) => ic.category);
+
+    if (incomeCategoryNames.length > 0) {
+      const targetIncomeCategory = await prisma.category.findFirst({
+        where: {
+          userId,
+          name: { in: incomeCategoryNames },
+        },
+      });
+
+      if (targetIncomeCategory) {
+        await prisma.category.update({
+          where: { id: targetIncomeCategory.id },
+          data: {
+            amount: netIncome,
+          },
+        });
+
+        res.status(200).json({
+          message: "Income balance updated successfully",
+          category: targetIncomeCategory.name,
+          newBalance: netIncome,
+        });
+        return;
+      }
+    }
+
+    res.status(404).json({
+      message: "No income categories found to update",
+    });
+  } catch (error) {
+    console.error("UpdateIncomeBalance error:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };

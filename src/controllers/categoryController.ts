@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import prisma from "../prisma";
 
-// User-defined interface for extended Request
 interface AuthRequest extends Request {
   user?: {
     userId: string;
@@ -13,12 +12,14 @@ interface AuthRequest extends Request {
 interface CategoryInput {
   name: string;
   amount: number;
+  type?: string;
 }
 
 interface Category {
   id: string;
   name: string;
   amount: number;
+  type: string;
   userId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -26,7 +27,7 @@ interface Category {
 
 interface CategoryModel {
   create: (args: {
-    data: { name: string; amount: number; userId: string };
+    data: { name: string; amount: number; type?: string; userId: string };
   }) => Promise<Category>;
   findMany: (args: {
     where: { userId: string };
@@ -45,7 +46,7 @@ export const createCategory = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { name, amount }: CategoryInput = req.body;
+    const { name, amount, type }: CategoryInput = req.body;
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -57,6 +58,7 @@ export const createCategory = async (
       data: {
         name,
         amount: Number(amount),
+        type: type || "expense",
         userId,
       },
     });
@@ -83,10 +85,8 @@ export const getCategories = async (
       where: { userId },
       orderBy: { createdAt: "desc" },
     });
-    console.log("-----GetCategories categories ----:", categories);
     res.status(200).json(categories);
   } catch (error) {
-    console.error("-----GetCategories error ----:", error);
     res.status(500).json({ message: "Error fetching categories", error });
   }
 };

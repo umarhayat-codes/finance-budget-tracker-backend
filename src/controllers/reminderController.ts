@@ -13,7 +13,6 @@ interface CreateReminderBody {
 
 export const createReminder = async (req: Request, res: Response) => {
   const { userId, title, amount, dateStr, type }: CreateReminderBody = req.body;
-  console.log(req.body);
   try {
     const newReminder = await prisma.reminder.create({
       data: {
@@ -29,7 +28,6 @@ export const createReminder = async (req: Request, res: Response) => {
       .status(201)
       .json({ message: "Reminder created successfully", data: newReminder });
   } catch (error) {
-    console.error("Error creating reminder:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -44,7 +42,6 @@ export const getReminders = async (req: Request, res: Response) => {
     });
     res.status(200).json({ data: reminders });
   } catch (error) {
-    console.error("Error fetching reminders:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };

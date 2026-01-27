@@ -8,7 +8,14 @@ interface CreateBudgetRequest extends Request {
     amount: string | number;
     year: string;
     month: string;
-    // budget?: string; // Optional field if user provides a description/title
+  };
+}
+
+interface AuthRequest extends Request {
+  user?: {
+    userId: string;
+    email: string;
+    role: string;
   };
 }
 
@@ -20,13 +27,37 @@ interface GetBudgetRequest extends Request {
 
 export const createBudget = async (
   req: CreateBudgetRequest,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const { userId, category, amount, year, month } = req.body;
 
     if (!userId || !category || !amount || !year || !month) {
       res.status(400).json({ message: "All fields are required" });
+      return;
+    }
+
+    const existingBudget = await prisma.budget.findFirst({
+      where: {
+        userId,
+        category,
+        month,
+        year,
+      },
+    });
+
+    if (existingBudget) {
+      const updatedBudget = await prisma.budget.update({
+        where: { id: existingBudget.id },
+        data: {
+          amount: existingBudget.amount + Number(amount),
+        },
+      });
+
+      res.status(200).json({
+        message: "Budget updated successfully",
+        budget: updatedBudget,
+      });
       return;
     }
 
@@ -37,7 +68,6 @@ export const createBudget = async (
         amount: Number(amount),
         year,
         month,
-        // budget: budget || "", // Store budget name/description if provided
       },
     });
 
@@ -46,14 +76,13 @@ export const createBudget = async (
       budget: newBudget,
     });
   } catch (error) {
-    console.error("Error creating budget:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
 
 export const getBudget = async (
   req: GetBudgetRequest,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const { userId } = req.params;
@@ -70,7 +99,55 @@ export const getBudget = async (
 
     res.status(200).json(budgets);
   } catch (error) {
-    console.error("Error fetching budgets:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getLatestBudgets = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const budgets = await prisma.budget.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 2,
+    });
+
+    const result = await Promise.all(
+      budgets.map(async (budget) => {
+        const monthStr = budget.month.padStart(2, "0");
+        const yearStr = budget.year;
+
+        const transactions = await prisma.transaction.findMany({
+          where: {
+            userId,
+            category: budget.category,
+            type: "expense",
+            date: {
+              contains: `${yearStr}-${monthStr}`,
+            },
+          },
+        });
+
+        const spent = transactions.reduce((acc, t) => acc + t.amount, 0);
+
+        return {
+          ...budget,
+          spent,
+        };
+      }),
+    );
+
+    res.status(200).json(result);
+  } catch (error) {
     res.status(500).json({ message: "Internal server error" });
   }
 };

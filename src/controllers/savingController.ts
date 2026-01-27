@@ -62,10 +62,8 @@ export const createSaving = async (
         userId,
       },
     });
-    console.log("-----CreateSaving saving ----:", saving);
     res.status(201).json(saving);
   } catch (error) {
-    console.log("-----CreateSaving error ----:", error);
     res.status(500).json({ message: "Error creating saving", error });
   }
 };
@@ -76,13 +74,6 @@ export const getSavings = async (
 ): Promise<void> => {
   try {
     const userId = req.user?.userId;
-    // or if the user wants to pass userId as param?
-    // The user requirement says: "get data saving by using user id which id come from frontend"
-    // Usually we use the auth token to get the user id for security, but IF the user specifically asked for route param:
-    // "fetch data of saving in ... get data saving by using user id which id come from frontend"
-    // In categoryController, it takes userId from req.user (token).
-    // I will stick to req.user for consistency unless forced otherwise, but looking at useCategoryHook it calls `api.get('/')`.
-    // It does NOT pass userId in URL. So it must be from token.
 
     if (!userId) {
       res.status(401).json({ message: "User not authenticated" });
@@ -93,10 +84,8 @@ export const getSavings = async (
       where: { userId },
       orderBy: { createdAt: "desc" },
     });
-    console.log("-----getSavings savings ----:", savings);
     res.status(200).json(savings);
   } catch (error) {
-    console.log("-----getSavings error ----:", error);
     res.status(500).json({ message: "Error fetching savings", error });
   }
 };

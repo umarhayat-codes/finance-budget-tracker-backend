@@ -34,12 +34,9 @@ export const getExpenseDistribution = async (
       return;
     }
 
-    // Fetch all savings for the user
     const savings = await prisma.saving.findMany({
       where: { userId: userId },
     });
-
-    // Fetch all expenses for the user
     const expenses = await prisma.transaction.findMany({
       where: {
         userId: userId,
@@ -55,7 +52,6 @@ export const getExpenseDistribution = async (
     let othersTotal = 0;
     let grandTotal = totalSavings;
 
-    // Detailed breakdown for "Other" categories
     const otherCategoriesMap: Record<string, number> = {};
 
     expenses.forEach((expense) => {
@@ -82,7 +78,6 @@ export const getExpenseDistribution = async (
         transportTotal += amount;
       } else {
         othersTotal += amount;
-        // Group other categories for detailed list
         const catName =
           expense.category.charAt(0).toUpperCase() +
           expense.category.slice(1).toLowerCase();
@@ -92,14 +87,11 @@ export const getExpenseDistribution = async (
     });
 
     const formatAmount = (amount: number): string => {
-      // Format: IDR 1.500.000 or similar
       return "IDR " + amount.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     };
 
     const calculatePercentage = (part: number, total: number): number => {
       if (total === 0) return 0;
-      // Fixed to 1 decimal place to avoid long floats, but requirement says "percentage value"
-      // The design usually expects number. Let's return number but precise enough.
       return Number(((part / total) * 100).toFixed(1));
     };
 
@@ -133,12 +125,11 @@ export const getExpenseDistribution = async (
         category: "Others",
         percentage: calculatePercentage(othersTotal, grandTotal),
         amount: formatAmount(othersTotal),
-        color: "#99FF33", // Bright green from design
+        color: "#99FF33",
         textColor: "#000000",
       },
     ];
 
-    // Process other categories for the list below graph
     const otherCategoriesList: ExpenseDistributionItem[] = Object.keys(
       otherCategoriesMap,
     ).map((cat, index) => ({
@@ -146,11 +137,10 @@ export const getExpenseDistribution = async (
       category: cat,
       percentage: calculatePercentage(otherCategoriesMap[cat], grandTotal),
       amount: formatAmount(otherCategoriesMap[cat]),
-      color: "#F0F0F0", // Default gray for list items
+      color: "#F0F0F0",
       textColor: "#000000",
     }));
 
-    // Sort other categories by percentage descending
     otherCategoriesList.sort((a, b) => b.percentage - a.percentage);
 
     res.status(200).json({
@@ -158,7 +148,6 @@ export const getExpenseDistribution = async (
       otherCategories: otherCategoriesList,
     });
   } catch (error) {
-    console.error("Error fetching expense distribution:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };

@@ -13,7 +13,7 @@ interface AuthRequest extends Request {
 
 export const createGoal = async (
   req: AuthRequest,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const { goalName, targetAmount, targetDate, goalType, fundingSource } =
@@ -44,7 +44,7 @@ export const createGoal = async (
         targetDate,
         goalType,
         fundingSource,
-        goalStatus: "On Track", // Default status
+        goalStatus: "On Track",
       },
     });
 
@@ -53,14 +53,13 @@ export const createGoal = async (
       goal: newGoal,
     });
   } catch (error) {
-    console.error("Error creating goal:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
 
 export const getGoals = async (
   req: AuthRequest,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const userId = req.user?.userId;
@@ -77,14 +76,13 @@ export const getGoals = async (
 
     res.status(200).json(goals);
   } catch (error) {
-    console.error("Error fetching goals:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
 
 export const updateGoalStatus = async (
   req: AuthRequest,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const { id } = req.params;
@@ -106,7 +104,6 @@ export const updateGoalStatus = async (
     });
 
     if (!goal || goal.userId !== userId) {
-      // Check if it exists or if the user is authorized to update it
       res.status(404).json({ message: "Goal not found" });
       return;
     }
@@ -121,7 +118,6 @@ export const updateGoalStatus = async (
       goal: updatedGoal,
     });
   } catch (error) {
-    console.error("Error updating goal status:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
