@@ -3,14 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import prisma from "../prisma";
 import { ChangePasswordBody } from "../routes/authRoute";
-
-interface AuthRequest extends Request {
-  user?: {
-    userId: string;
-    email: string;
-    role: string;
-  };
-}
+import { AuthController } from "../types";
 
 export const signup = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -93,7 +86,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getMe = async (
+  req: AuthController,
+  res: Response,
+): Promise<void> => {
   try {
     const user = req.user;
 

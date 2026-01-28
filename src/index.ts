@@ -17,7 +17,6 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
 app.use(
   process.env.NODE_ENV === "development" ? morgan("dev") : morgan("combined"),
 );
@@ -30,7 +29,6 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
-// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/categories", categoryRoutes);
@@ -40,11 +38,7 @@ app.use("/api/reminder", reminderRoutes);
 app.use("/api/savings", savingRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/finance", financeRoutes);
-// app.get("/", (req, res) => {
-//   res.send("API is running...");
-// });
 
-// Start Server
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

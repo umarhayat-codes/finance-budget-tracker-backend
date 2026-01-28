@@ -3,6 +3,7 @@ import {
   createBudget,
   getBudget,
   getLatestBudgets,
+  getBudgetAnalysis,
 } from "../controllers/budgetController";
 import { verifyToken } from "../middleware/authMiddleware";
 
@@ -10,6 +11,7 @@ const router = express.Router();
 
 router.post("/", createBudget);
 router.get("/latest", verifyToken, getLatestBudgets);
+router.get("/analysis", verifyToken, getBudgetAnalysis);
 router.get("/:userId", getBudget);
 
 export default router;

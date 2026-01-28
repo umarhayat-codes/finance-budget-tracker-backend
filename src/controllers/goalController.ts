@@ -1,15 +1,6 @@
 import { Request, Response } from "express";
 import prisma from "../prisma";
-
-interface TokenPayload {
-  userId: string;
-  email: string;
-  role: string;
-}
-
-interface AuthRequest extends Request {
-  user?: TokenPayload;
-}
+import { AuthRequest } from "../types";
 
 export const createGoal = async (
   req: AuthRequest,

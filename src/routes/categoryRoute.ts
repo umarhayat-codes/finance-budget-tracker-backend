@@ -7,8 +7,7 @@ import { verifyToken } from "../middleware/authMiddleware";
 
 const router = express.Router();
 
-// All category routes are protected
-router.post("/", verifyToken, createCategory as any);
-router.get("/", verifyToken, getCategories as any);
+router.post("/", verifyToken, createCategory);
+router.get("/", verifyToken, getCategories);
 
 export default router;

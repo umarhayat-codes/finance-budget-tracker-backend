@@ -2,10 +2,8 @@ import express from "express";
 import {
   createTransaction,
   getTransactions,
-  getTransactionSummary,
   getFinancialSummary,
   getRecentTransactions,
-  updateIncomeBalance,
 } from "../controllers/transactionController";
 import { verifyToken } from "../middleware/authMiddleware";
 
@@ -13,9 +11,7 @@ const router = express.Router();
 
 router.post("/", verifyToken, createTransaction);
 router.get("/", verifyToken, getTransactions);
-router.get("/summary", verifyToken, getTransactionSummary);
 router.get("/financial-summary", verifyToken, getFinancialSummary);
 router.get("/recent", verifyToken, getRecentTransactions);
-router.put("/update-income", verifyToken, updateIncomeBalance);
 
 export default router;

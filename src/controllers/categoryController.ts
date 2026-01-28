@@ -1,48 +1,11 @@
 import { Request, Response } from "express";
 import prisma from "../prisma";
-
-interface AuthRequest extends Request {
-  user?: {
-    userId: string;
-    email: string;
-    role: string;
-  };
-}
-
-interface CategoryInput {
-  name: string;
-  amount: number;
-  type?: string;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  amount: number;
-  type: string;
-  userId: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface CategoryModel {
-  create: (args: {
-    data: { name: string; amount: number; type?: string; userId: string };
-  }) => Promise<Category>;
-  findMany: (args: {
-    where: { userId: string };
-    orderBy?: { createdAt: "asc" | "desc" };
-  }) => Promise<Category[]>;
-}
-
-interface ExtendedPrisma {
-  category: CategoryModel;
-}
+import { AuthController, CategoryInput, ExtendedPrisma } from "../types";
 
 const db = prisma as unknown as ExtendedPrisma;
 
 export const createCategory = async (
-  req: AuthRequest,
+  req: AuthController,
   res: Response,
 ): Promise<void> => {
   try {
@@ -70,7 +33,7 @@ export const createCategory = async (
 };
 
 export const getCategories = async (
-  req: AuthRequest,
+  req: AuthController,
   res: Response,
 ): Promise<void> => {
   try {

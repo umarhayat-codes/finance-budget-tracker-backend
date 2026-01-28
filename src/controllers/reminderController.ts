@@ -1,15 +1,8 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
+import { CreateReminderBody } from "../types";
 
 const prisma = new PrismaClient();
-
-interface CreateReminderBody {
-  userId: string;
-  title: string;
-  amount: string;
-  dateStr: string;
-  type: string;
-}
 
 export const createReminder = async (req: Request, res: Response) => {
   const { userId, title, amount, dateStr, type }: CreateReminderBody = req.body;
