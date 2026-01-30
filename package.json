@@ -14,9 +14,9 @@
   },
   "scripts": {
     "start": "node dist/index.js",
-    "build": "tsc",
+    "build": "prisma generate --schema=./prisma/schema.prisma && tsc",
     "dev": "nodemon src/index.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate --schema=./prisma/schema.prisma || echo 'Prisma generate skipped - will run during build'"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
