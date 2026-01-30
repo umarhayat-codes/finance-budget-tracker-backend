@@ -15,6 +15,7 @@ import financeRoutes from "./routes/financeRoute";
 dotenv.config();
 
 const app = express();
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 5000;
 
 app.use(
@@ -23,7 +24,11 @@ app.use(
 app.use(
   cors({
     credentials: true,
-    origin: ["http://localhost:3000", "http://localhost:3001"],
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:3001",
+      process.env.FRONTEND_URL || "",
+    ].filter(Boolean),
   }),
 );
 app.use(express.json());
