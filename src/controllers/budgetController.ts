@@ -256,7 +256,6 @@ export const getBudgetAnalysis = async (
 
     res.status(200).json(yearlyData);
   } catch (error) {
-    console.error("Error calculating yearly budget spending:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };

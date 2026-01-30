@@ -15,7 +15,7 @@ import financeRoutes from "./routes/financeRoute";
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 app.use(
   process.env.NODE_ENV === "development" ? morgan("dev") : morgan("combined"),
@@ -23,7 +23,7 @@ app.use(
 app.use(
   cors({
     credentials: true,
-    origin: ["http://localhost:3000", "http://localhost:3001"], // Allow both common frontend ports
+    origin: ["http://localhost:3000", "http://localhost:3001"],
   }),
 );
 app.use(express.json());
