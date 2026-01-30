@@ -18,17 +18,25 @@ const app = express();
 app.set("trust proxy", 1);
 const PORT = process.env.PORT || 5000;
 
+// CORS configuration
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "https://finance-budget-tracker-frontend-okg.vercel.app",
+  process.env.FRONTEND_URL,
+].filter((origin): origin is string => Boolean(origin));
+
+console.log("Allowed CORS origins:", allowedOrigins);
+
 app.use(
   process.env.NODE_ENV === "development" ? morgan("dev") : morgan("combined"),
 );
 app.use(
   cors({
     credentials: true,
-    origin: [
-      "http://localhost:3000",
-      "http://localhost:3001",
-      process.env.FRONTEND_URL || "",
-    ].filter(Boolean),
+    origin: allowedOrigins,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
   }),
 );
 app.use(express.json());
