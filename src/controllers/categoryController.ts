@@ -20,7 +20,7 @@ export const createCategory = async (
     const category = await db.category.create({
       data: {
         name,
-        amount: Number(amount),
+        amount: amount !== undefined ? Number(amount) : 0,
         type: type || "expense",
         userId,
       },

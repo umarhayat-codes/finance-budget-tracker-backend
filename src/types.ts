@@ -110,7 +110,7 @@ export interface CreateBudgetRequest extends Request {
 // new
 export interface CategoryInput {
   name: string;
-  amount: number;
+  amount?: number;
   type?: string;
 }
 
